@@ -131,13 +131,22 @@ namespace Xtensive.Orm.Upgrade
           }
         }
       }
+      
       foreach (var indexPair in indexPairs.Keys) {
         var referencedIndex = indexPair.First;
         var referencingIndex = indexPair.Second;
         var referencingTable = targetModel.Tables[resolver.GetNodeName(referencingIndex.ReflectedType)];
         var referencedTable = targetModel.Tables[resolver.GetNodeName(referencedIndex.ReflectedType)];
+
+        var keyColumns = referencingIndex.KeyColumns.Select(ci => ci.Key.Name).ToList();
+        if (referencingIndex.DeclaringType.UnderlyingType.GetAttribute<IndexesExtensionAttribute>() is { } indexesExtension) {
+          foreach (var columnName in indexesExtension.KeyFields) {
+            keyColumns.Add(columnName);
+          }
+        }
+        
         var storageReferencingIndex = FindIndex(
-          referencingTable, referencingIndex.KeyColumns.Select(ci => ci.Key.Name).ToList());
+          referencingTable, keyColumns);
 
         string foreignKeyName = nameBuilder.BuildHierarchyForeignKeyName(referencingIndex.ReflectedType, referencedIndex.ReflectedType);
         CreateHierarchyForeignKey(referencingTable, referencedTable, storageReferencingIndex, foreignKeyName);
@@ -161,6 +170,16 @@ namespace Xtensive.Orm.Upgrade
             ? pair.Value
             : Direction.Positive);
       }
+
+      if (index.DeclaringType.UnderlyingType.GetAttribute<IndexesExtensionAttribute>() is { } indexesExtension) {
+        foreach (var columnName in indexesExtension.KeyFields) {
+          new KeyColumnRef(
+            secondaryIndex, 
+            currentTable.Columns[columnName], 
+            Direction.Positive);
+        }
+      }
+      
       // At least SQL Server does not support clustered indexes with included columns.
       // For now this is the only RDBMS that have support for clustered indexes in DO.
       // Let's omit additional checks for ServerFeatures here
@@ -302,7 +321,7 @@ namespace Xtensive.Orm.Upgrade
       string name = providerInfo.ConstantPrimaryIndexName;
       if (string.IsNullOrEmpty(name))
         name = index.MappingName;
-
+      
       var primaryIndex = new PrimaryIndexInfo(currentTable, name);
       foreach (KeyValuePair<ColumnInfo, Direction> pair in index.KeyColumns) {
         string columName = GetPrimaryIndexColumnName(index, pair.Key, index);
@@ -312,6 +331,16 @@ namespace Xtensive.Orm.Upgrade
             ? pair.Value
             : Direction.Positive);
       }
+
+      if (index.DeclaringType.UnderlyingType.GetAttribute<IndexesExtensionAttribute>() is { } indexesExtension) {
+        foreach (var columnName in indexesExtension.KeyFields) {
+          new KeyColumnRef(
+            primaryIndex, 
+            currentTable.Columns[columnName], 
+            Direction.Positive);
+        }
+      }
+      
       primaryIndex.PopulateValueColumns();
       primaryIndex.IsClustered = index.IsClustered && providerInfo.Supports(ProviderFeatures.ClusteredIndexes);
 
