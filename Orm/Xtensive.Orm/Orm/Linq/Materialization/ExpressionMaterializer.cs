@@ -423,6 +423,70 @@ namespace Xtensive.Orm.Linq.Materialization
       return tupleExpression.MakeTupleAccess(expression.Type, expression.Mapping.Offset);
     }
 
+    protected override Expression VisitJsonFieldExpression(JsonFieldExpression expression)
+    {
+      var tupleExpression = GetTupleExpression(expression);
+      // The JSON column stores a string value in the tuple
+      var jsonStringAccess = tupleExpression.MakeTupleAccess(typeof(string), expression.Mapping.Offset);
+
+      if (expression.JsonPath == "$") {
+        // Whole JSON object - deserialize from string
+        if (WellKnownOrmTypes.JsonType.IsAssignableFrom(expression.Type)) {
+          var deserializeMethod = typeof(System.Text.Json.JsonSerializer)
+            .GetMethod(nameof(System.Text.Json.JsonSerializer.Deserialize), new[] { typeof(string), typeof(System.Text.Json.JsonSerializerOptions) })
+            .MakeGenericMethod(expression.Type);
+          return Expression.Call(deserializeMethod, jsonStringAccess, Expression.Constant(null, typeof(System.Text.Json.JsonSerializerOptions)));
+        }
+        // Fallback: just return the string
+        return jsonStringAccess;
+      }
+
+      // Property access: generate JsonExpressionHelper.JsonValue(json, path)
+      // which the ExpressionProcessor translates to JSON_VALUE(col, path) in SQL
+      var jsonValueMethod = typeof(JsonExpressionHelper).GetMethod(nameof(JsonExpressionHelper.JsonValue));
+      var jsonValueCall = Expression.Call(jsonValueMethod, jsonStringAccess, Expression.Constant(expression.JsonPath));
+
+      // If the target type is string, we're done
+      if (expression.Type == typeof(string)) {
+        return jsonValueCall;
+      }
+
+      // For non-string types, add a type conversion
+      // This generates CAST(JSON_VALUE(col, path) AS target_type) in SQL
+      // and Parse(value) at client-side runtime
+      var parseMethod = FindParseMethod(expression.Type);
+      if (parseMethod != null) {
+        return Expression.Convert(jsonValueCall, expression.Type, parseMethod);
+      }
+
+      // Fallback: if a nested JSON object type, use JsonQuery instead
+      if (WellKnownOrmTypes.JsonType.IsAssignableFrom(expression.Type)) {
+        var jsonQueryMethod = typeof(JsonExpressionHelper).GetMethod(nameof(JsonExpressionHelper.JsonQuery));
+        var jsonQueryCall = Expression.Call(jsonQueryMethod, jsonStringAccess, Expression.Constant(expression.JsonPath));
+        var deserializeMethod = typeof(System.Text.Json.JsonSerializer)
+          .GetMethod(nameof(System.Text.Json.JsonSerializer.Deserialize), new[] { typeof(string), typeof(System.Text.Json.JsonSerializerOptions) })
+          .MakeGenericMethod(expression.Type);
+        return Expression.Call(deserializeMethod, jsonQueryCall, Expression.Constant(null, typeof(System.Text.Json.JsonSerializerOptions)));
+      }
+
+      // Default: return as string and let the runtime handle the conversion
+      return jsonValueCall;
+    }
+
+    private static MethodInfo FindParseMethod(Type targetType)
+    {
+      var type = targetType.StripNullable();
+      var method = type.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+      if (method != null && method.ReturnType == type) {
+        if (targetType.IsNullable()) {
+          // For nullable types, we can't directly use Parse because null string should return null
+          return null;
+        }
+        return method;
+      }
+      return null;
+    }
+
     protected override Expression VisitUnary(UnaryExpression u)
     {
       var originalOperandType = u.Operand.Type;

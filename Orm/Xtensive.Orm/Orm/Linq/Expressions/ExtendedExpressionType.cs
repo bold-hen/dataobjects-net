@@ -26,6 +26,7 @@ namespace Xtensive.Orm.Linq.Expressions
     LocalCollection,
     Structure,
     Constructor,
-    FullText
+    FullText,
+    JsonField
   }
 }

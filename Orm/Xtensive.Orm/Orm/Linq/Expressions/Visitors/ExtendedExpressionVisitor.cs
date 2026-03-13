@@ -51,6 +51,8 @@ namespace Xtensive.Orm.Linq.Expressions.Visitors
         return VisitConstructorExpression((ConstructorExpression) expression);
       case ExtendedExpressionType.FullText:
         return VisitFullTextExpression((FullTextExpression) expression);
+      case ExtendedExpressionType.JsonField:
+        return VisitJsonFieldExpression((JsonFieldExpression) expression);
       default:
         return base.VisitUnknown(expression);
       }
@@ -135,6 +137,11 @@ namespace Xtensive.Orm.Linq.Expressions.Visitors
     }
 
     protected virtual Expression VisitColumnExpression(ColumnExpression expression)
+    {
+      return expression;
+    }
+
+    protected virtual Expression VisitJsonFieldExpression(JsonFieldExpression expression)
     {
       return expression;
     }

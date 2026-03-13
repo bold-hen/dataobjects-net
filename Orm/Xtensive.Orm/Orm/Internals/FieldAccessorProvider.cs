@@ -21,6 +21,7 @@ namespace Xtensive.Orm.Internals
     private static readonly Type EntityFieldAccessorType = typeof(EntityFieldAccessor<>);
     private static readonly Type EntitySetFieldAccessorType = typeof(EntitySetFieldAccessor<>);
     private static readonly Type StructureFieldAccessorType = typeof(StructureFieldAccessor<>);
+    private static readonly Type JsonFieldAccessorType = typeof(JsonFieldAccessor<>);
     private static readonly Type EnumFieldAccessorType = typeof(EnumFieldAccessor<>);
     private static readonly Type KeyFieldAccessorType = typeof(KeyFieldAccessor<>);
     private static readonly Type DefaultFieldAccessorType = typeof(DefaultFieldAccessor<>);
@@ -39,6 +40,10 @@ namespace Xtensive.Orm.Internals
 
       if (field.IsStructure) {
         return CreateFieldAccessor(StructureFieldAccessorType, field);
+      }
+
+      if (field.IsJson) {
+        return CreateFieldAccessor(JsonFieldAccessorType, field);
       }
 
       if (field.IsEnum) {

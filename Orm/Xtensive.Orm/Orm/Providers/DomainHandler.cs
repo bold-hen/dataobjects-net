@@ -138,6 +138,7 @@ namespace Xtensive.Orm.Providers
         //typeof (VbStringsCompilers),
         //typeof (VbDateAndTimeCompilers),
         typeof (EnumCompilers),
+        typeof (JsonCompilers),
       };
     }
 

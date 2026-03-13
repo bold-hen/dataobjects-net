@@ -140,11 +140,21 @@ namespace Xtensive.Orm.Building.Definitions
     }
 
     /// <summary>
+    /// Gets a value indicating whether this property is a JSON field
+    /// stored as a single JSON column.
+    /// </summary>
+    public bool IsJson
+    {
+      get { return (attributes & FieldAttributes.Json) != 0; }
+      internal set { attributes = value ? attributes | FieldAttributes.Json : attributes & ~FieldAttributes.Json; }
+    }
+
+    /// <summary>
     /// Gets a value indicating whether this property is primitive field.
     /// </summary>
     public bool IsPrimitive
     {
-      get { return !IsStructure && !IsEntity && !IsEntitySet; }
+      get { return !IsStructure && !IsEntity && !IsEntitySet && !IsJson; }
     }
 
     /// <summary>
@@ -322,7 +332,17 @@ namespace Xtensive.Orm.Building.Definitions
       this.validator = validator;
       IsStructure = valueType.IsSubclassOf(WellKnownOrmTypes.Structure) || valueType == WellKnownOrmTypes.Structure;
       IsEntity = WellKnownOrmInterfaces.Entity.IsAssignableFrom(valueType);
-      if ((valueType.IsClass || valueType.IsInterface) && !IsStructure)
+
+      // JsonType or JsonType[]
+      var isJsonType = valueType.IsSubclassOf(WellKnownOrmTypes.JsonType);
+      var isJsonArray = valueType.IsArray
+        && valueType.GetElementType() is { } elementType
+        && elementType.IsSubclassOf(WellKnownOrmTypes.JsonType);
+      IsJson = isJsonType || isJsonArray;
+
+      if ((valueType.IsClass || valueType.IsInterface) && !IsStructure && !IsJson)
+        attributes |= FieldAttributes.Nullable;
+      if (IsJson)
         attributes |= FieldAttributes.Nullable;
       ValueType = valueType;
       Validators = new List<IPropertyValidator>();

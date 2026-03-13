@@ -926,6 +926,45 @@ namespace Xtensive.Sql
 
     #endregion
 
+    #region JSON functions
+
+    public static SqlFunctionCall JsonValue(SqlExpression expression, SqlExpression path)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(expression, nameof(expression));
+      ArgumentValidator.EnsureArgumentNotNull(path, nameof(path));
+      return new SqlFunctionCall(SqlFunctionType.JsonValue, expression, path);
+    }
+
+    public static SqlFunctionCall JsonQuery(SqlExpression expression, SqlExpression path)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(expression, nameof(expression));
+      ArgumentValidator.EnsureArgumentNotNull(path, nameof(path));
+      return new SqlFunctionCall(SqlFunctionType.JsonQuery, expression, path);
+    }
+
+    public static SqlFunctionCall JsonModify(SqlExpression expression, SqlExpression path, SqlExpression newValue)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(expression, nameof(expression));
+      ArgumentValidator.EnsureArgumentNotNull(path, nameof(path));
+      ArgumentValidator.EnsureArgumentNotNull(newValue, nameof(newValue));
+      return new SqlFunctionCall(SqlFunctionType.JsonModify, expression, path, newValue);
+    }
+
+    public static SqlFunctionCall IsJson(SqlExpression expression)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(expression, nameof(expression));
+      return new SqlFunctionCall(SqlFunctionType.IsJson, expression);
+    }
+
+    public static SqlFunctionCall JsonPathExists(SqlExpression expression, SqlExpression path)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(expression, nameof(expression));
+      ArgumentValidator.EnsureArgumentNotNull(path, nameof(path));
+      return new SqlFunctionCall(SqlFunctionType.JsonPathExists, expression, path);
+    }
+
+    #endregion
+
     #region FunctionCall
 
     public static SqlUserFunctionCall FunctionCall(string name, IEnumerable<SqlExpression> expressions)

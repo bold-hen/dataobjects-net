@@ -24,7 +24,7 @@ namespace Xtensive.Orm.Model
     Entity = 0x40,
     EntitySet = 0x80,
     PrimaryKey = 0x0100,
-    NonPrimitive = Entity | EntitySet | Structure,
+    NonPrimitive = Entity | EntitySet | Structure | Json,
     System = 0x0400,
     LazyLoad = 0x0800,
     InterfaceImplementation = 0x1000,
@@ -40,5 +40,6 @@ namespace Xtensive.Orm.Model
     Nested = 0x800000,
     NotIndexed = 0x1000000,
     DeclaredAsNullable = 0x2000000,
+    Json = 0x4000000,
   }
 }

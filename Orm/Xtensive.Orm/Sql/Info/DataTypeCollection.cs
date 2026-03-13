@@ -196,9 +196,14 @@ namespace Xtensive.Sql.Info
     public DataTypeInfo VarBinaryMax { get; set; }
 
     /// <summary>
-    /// A globally unique identifier (GUID). 
+    /// A globally unique identifier (GUID).
     /// </summary>
     public DataTypeInfo Guid { get; set; }
+
+    /// <summary>
+    /// JSON data type. Stores JSON documents in native binary format.
+    /// </summary>
+    public DataTypeInfo Json { get; set; }
 
     /// <inheritdoc/>
     public override void Lock(bool recursive)
@@ -249,6 +254,7 @@ namespace Xtensive.Sql.Info
       yield return Interval;
       yield return DateOnly;
       yield return TimeOnly;
+      yield return Json;
       yield break;
     }
 

@@ -23,5 +23,6 @@ namespace Xtensive.Orm.Linq
     Subquery,
     FullTextMatch,
     Array,
+    Json,
   }
 }

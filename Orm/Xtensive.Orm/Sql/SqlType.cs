@@ -165,6 +165,16 @@ namespace Xtensive.Sql
 
     #endregion
 
+    #region Json
+
+    /// <summary>
+    /// JSON data type. Stores JSON documents in native binary format (SQL Server 2025+)
+    /// or as text in nvarchar(max) on older versions.
+    /// </summary>
+    public static readonly SqlType Json = new SqlType("Json");
+
+    #endregion
+
     #region Other
 
     /// <summary>

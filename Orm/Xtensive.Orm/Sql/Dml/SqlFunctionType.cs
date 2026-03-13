@@ -106,6 +106,13 @@ namespace Xtensive.Sql.Dml
     RoundDecimalToZero,
     RoundDoubleToEven,
     RoundDoubleToZero,
+
+    // JSON functions
+    JsonValue,
+    JsonQuery,
+    JsonModify,
+    IsJson,
+    JsonPathExists,
     //!!! max value is used for array size
   }
 }

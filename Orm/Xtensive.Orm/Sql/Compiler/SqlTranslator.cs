@@ -2188,6 +2188,11 @@ namespace Xtensive.Sql.Compiler
         SqlFunctionType.Square => "SQUARE",
         SqlFunctionType.SystemUser => "SYSTEM_USER",
         SqlFunctionType.Tan => "TAN",
+        SqlFunctionType.JsonValue => "JSON_VALUE",
+        SqlFunctionType.JsonQuery => "JSON_QUERY",
+        SqlFunctionType.JsonModify => "JSON_MODIFY",
+        SqlFunctionType.IsJson => "ISJSON",
+        SqlFunctionType.JsonPathExists => "JSON_PATH_EXISTS",
         _ => throw new NotSupportedException(string.Format(Strings.ExFunctionXIsNotSupported, type))
       });
     }

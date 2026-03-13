@@ -311,6 +311,10 @@ namespace Xtensive.Orm.Building.Builders
         }
       }
 
+      if (fieldInfo.IsJson) {
+        fieldInfo.Column = BuildJsonColumn(fieldInfo);
+      }
+
       if (fieldInfo.IsPrimitive) {
         fieldInfo.DefaultValue = fieldDef.DefaultValue;
         fieldInfo.DefaultSqlExpression = fieldDef.DefaultSqlExpression;
@@ -418,6 +422,15 @@ namespace Xtensive.Orm.Building.Builders
       return underlyingBaseType != null
         && underlyingBaseType.IsGenericType
         && underlyingBaseType.GetGenericTypeDefinition() == WellKnownOrmTypes.EntitySetItemOfT1T2;
+    }
+
+    private ColumnInfo BuildJsonColumn(FieldInfo field)
+    {
+      // JSON fields are stored as a single string column (serialized JSON)
+      var column = new ColumnInfo(field, typeof(string));
+      column.Name = context.NameBuilder.BuildColumnName(field, column);
+      column.IsNullable = field.IsNullable;
+      return column;
     }
 
     private ColumnInfo BuildDeclaredColumn(FieldInfo field)

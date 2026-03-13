@@ -259,7 +259,7 @@ namespace Xtensive.Orm.Model
     public bool IsPrimitive
     {
       [DebuggerStepThrough]
-      get { return !IsStructure && !IsEntity && !IsEntitySet; }
+      get { return !IsStructure && !IsEntity && !IsEntitySet && !IsJson; }
     }
 
     /// <summary>
@@ -287,6 +287,16 @@ namespace Xtensive.Orm.Model
     {
       [DebuggerStepThrough]
       get { return (Attributes & FieldAttributes.EntitySet) != 0; }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether this property is a JSON field
+    /// stored as a single JSON column.
+    /// </summary>
+    public bool IsJson
+    {
+      [DebuggerStepThrough]
+      get { return (Attributes & FieldAttributes.Json) != 0; }
     }
 
     /// <summary>

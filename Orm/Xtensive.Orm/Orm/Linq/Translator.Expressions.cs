@@ -1487,6 +1487,11 @@ namespace Xtensive.Orm.Linq
           var persistentExpression = (IPersistentExpression) expression;
           result = persistentExpression.Fields.First(propertyFilter);
           break;
+        case ExtendedExpressionType.JsonField:
+          var jsonFieldExpression = (JsonFieldExpression) expression;
+          var jsonPropertyInfo = (PropertyInfo) member;
+          result = jsonFieldExpression.CreatePropertyAccess(jsonPropertyInfo.Name, jsonPropertyInfo.PropertyType);
+          break;
         case ExtendedExpressionType.LocalCollection:
           var localCollectionExpression = (LocalCollectionExpression) expression;
           result = (Expression) localCollectionExpression.Fields[member];

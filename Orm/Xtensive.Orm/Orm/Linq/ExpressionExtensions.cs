@@ -181,6 +181,14 @@ namespace Xtensive.Orm.Linq
         return MemberType.Structure;
       }
 
+      if (WellKnownOrmTypes.JsonType.IsAssignableFrom(type)) {
+        return MemberType.Json;
+      }
+
+      if (type.IsArray && WellKnownOrmTypes.JsonType.IsAssignableFrom(type.GetElementType())) {
+        return MemberType.Json;
+      }
+
       if (WellKnownOrmTypes.EntitySetBase.IsAssignableFrom(type)) {
         return MemberType.EntitySet;
       }

@@ -216,6 +216,7 @@ namespace Xtensive.Sql.Drivers.SqlServer
         11 => new v11.Driver(coreServerInfo, parser, isEnsureAlive),
         12 => new v12.Driver(coreServerInfo, parser, isEnsureAlive),
         13 => new v13.Driver(coreServerInfo, parser, isEnsureAlive),
+        >= 17 => new v17.Driver(coreServerInfo, parser, isEnsureAlive),
         _ => new v13.Driver(coreServerInfo, parser, isEnsureAlive)
       };
     }

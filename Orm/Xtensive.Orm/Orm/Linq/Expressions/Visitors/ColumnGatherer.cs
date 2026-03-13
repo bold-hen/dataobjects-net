@@ -228,6 +228,12 @@ namespace Xtensive.Orm.Linq.Expressions.Visitors
         columns.AddRange(expressionColumns.Select(i=>new Pair<int, Expression>(i, parameterizedExpression)));
     }
 
+    protected override Expression VisitJsonFieldExpression(JsonFieldExpression expression)
+    {
+      AddColumns(expression, expression.Mapping.GetItems());
+      return expression;
+    }
+
     protected override Expression VisitFullTextExpression(FullTextExpression expression)
     {
       VisitEntityExpression(expression.EntityExpression);

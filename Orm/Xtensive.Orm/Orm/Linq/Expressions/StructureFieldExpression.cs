@@ -204,6 +204,10 @@ namespace Xtensive.Orm.Linq.Expressions
         return EntityFieldExpression.CreateEntityField(nestedField, offset);
       }
 
+      if (nestedField.IsJson) {
+        return JsonFieldExpression.CreateJsonField(nestedField, offset);
+      }
+
       throw new NotSupportedException(string.Format(Strings.ExNestedFieldXIsNotSupported, nestedField.Attributes));
     }
 // ReSharper restore RedundantNameQualifier

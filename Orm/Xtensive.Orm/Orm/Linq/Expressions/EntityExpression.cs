@@ -215,6 +215,10 @@ namespace Xtensive.Orm.Linq.Expressions
         return EntitySetExpression.CreateEntitySet(nestedField);
       }
 
+      if (nestedField.IsJson) {
+        return JsonFieldExpression.CreateJsonField(nestedField, offset);
+      }
+
       throw new NotSupportedException(string.Format(Strings.ExNestedFieldXIsNotSupported, nestedField.Attributes));
     }
 
