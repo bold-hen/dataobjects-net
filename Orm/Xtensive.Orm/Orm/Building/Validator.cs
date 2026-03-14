@@ -154,6 +154,14 @@ namespace Xtensive.Orm.Building
         return;
       }
 
+      if (fieldType.IsSubclassOf(WellKnownOrmTypes.JsonType)) {
+        if (isKeyField) {
+          throw new DomainBuilderException(string.Format(Strings.ExKeyFieldCantBeOfXType, fieldType.GetShortName()));
+        }
+
+        return;
+      }
+
       if (fieldType.IsOfGenericType(WellKnownOrmTypes.EntitySetOfT)) {
         if (declaringType.IsStructure) {
           throw new DomainBuilderException(

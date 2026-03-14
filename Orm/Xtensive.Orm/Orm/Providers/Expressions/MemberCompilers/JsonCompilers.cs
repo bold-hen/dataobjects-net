@@ -11,13 +11,13 @@ namespace Xtensive.Orm.Providers
   [CompilerContainer(typeof(SqlExpression))]
   internal static class JsonCompilers
   {
-    [Compiler(typeof(JsonExpressionHelper), nameof(JsonExpressionHelper.JsonValue))]
+    [Compiler(typeof(JsonExpressionHelper), nameof(JsonExpressionHelper.JsonValue), TargetKind.Static | TargetKind.Method)]
     public static SqlExpression JsonValueCompiler(SqlExpression json, SqlExpression path)
     {
       return SqlDml.JsonValue(json, path);
     }
 
-    [Compiler(typeof(JsonExpressionHelper), nameof(JsonExpressionHelper.JsonQuery))]
+    [Compiler(typeof(JsonExpressionHelper), nameof(JsonExpressionHelper.JsonQuery), TargetKind.Static | TargetKind.Method)]
     public static SqlExpression JsonQueryCompiler(SqlExpression json, SqlExpression path)
     {
       return SqlDml.JsonQuery(json, path);

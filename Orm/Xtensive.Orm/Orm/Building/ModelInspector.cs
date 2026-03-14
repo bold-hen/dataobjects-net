@@ -326,6 +326,12 @@ namespace Xtensive.Orm.Building
         return;
       }
 
+      if (fieldDef.IsJson) {
+        // JSON fields map to a single column (json or nvarchar(max)),
+        // they don't reference other model types.
+        return;
+      }
+
       if (fieldDef.IsStructure) {
         context.Validator.ValidateStructureField(typeDef, fieldDef);
         context.DependencyGraph.AddEdge(
