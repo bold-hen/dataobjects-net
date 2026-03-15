@@ -661,7 +661,10 @@ namespace Xtensive.Orm.Model
 
       var adapterIndex = 0;
       foreach (var field in Fields) {
-        if (field.IsStructure || field.IsEntitySet) {
+        var isJsonTypeArray = field.IsJson
+          && field.ValueType.IsGenericType
+          && field.ValueType.GetGenericTypeDefinition() == typeof(JsonTypeArray<>);
+        if (field.IsStructure || field.IsEntitySet || isJsonTypeArray) {
           field.AdapterIndex = adapterIndex++;
         }
       }

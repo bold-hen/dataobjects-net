@@ -33,6 +33,12 @@ namespace Xtensive.Sql.Drivers.SqlServer.v17
       return new TypeMapper(this);
     }
 
+    protected override void RegisterCustomReverseMappings(TypeMappingRegistryBuilder builder)
+    {
+      base.RegisterCustomReverseMappings(builder);
+      builder.AddReverse(SqlType.Json, typeof(string));
+    }
+
     public Driver(CoreServerInfo coreServerInfo, ErrorMessageParser errorMessageParser, bool checkConnectionIsAlive)
       : base(coreServerInfo, errorMessageParser, checkConnectionIsAlive)
     {

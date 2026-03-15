@@ -17,6 +17,7 @@ using Xtensive.Orm.Model.Stored;
 using Xtensive.Orm.Providers;
 using Xtensive.Orm.Upgrade.Model;
 using Xtensive.Reflection;
+using Xtensive.Sql;
 using PartialIndexFilterInfo = Xtensive.Orm.Upgrade.Model.PartialIndexFilterInfo;
 using ReferentialAction = Xtensive.Orm.Upgrade.Model.ReferentialAction;
 
@@ -187,7 +188,17 @@ namespace Xtensive.Orm.Upgrade
       }
 
       var typeInfoPrototype = new StorageTypeInfo(nullableType, null, column.IsNullable, column.Length, column.Precision, column.Scale);
-      var nativeTypeInfo = CreateType(nonNullableType, column.Length, column.Precision, column.Scale);
+      StorageTypeInfo nativeTypeInfo;
+
+      // For JSON fields, use native json type if supported by the driver
+      if (column.Field != null && column.Field.IsJson && driver.ServerInfo.DataTypes.Json != null) {
+        var jsonSqlType = new SqlValueType(SqlType.Json);
+        nativeTypeInfo = new StorageTypeInfo(
+          driver.MapSqlType(jsonSqlType.Type), jsonSqlType, jsonSqlType.Length, jsonSqlType.Precision, jsonSqlType.Scale);
+      }
+      else {
+        nativeTypeInfo = CreateType(nonNullableType, column.Length, column.Precision, column.Scale);
+      }
 
       // We need the same type as in SQL database here (i.e. the same as native)
       var typeInfo = new StorageTypeInfo(ToNullable(nativeTypeInfo.Type, column.IsNullable), nativeTypeInfo.NativeType, column.IsNullable, nativeTypeInfo.Length, nativeTypeInfo.Precision, nativeTypeInfo.Scale);

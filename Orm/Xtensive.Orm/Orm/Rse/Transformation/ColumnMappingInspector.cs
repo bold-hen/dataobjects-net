@@ -102,6 +102,12 @@ namespace Xtensive.Orm.Rse.Transformation
       return provider;
     }
 
+    protected override CompilableProvider VisitOpenJson(OpenJsonProvider provider)
+    {
+      mappings[provider] = CollectionUtils.RangeToList(0, provider.Header.Length);
+      return provider;
+    }
+
     protected override SeekProvider VisitSeek(SeekProvider provider)
     {
       mappings[provider] = CollectionUtils.RangeToList(0, provider.Header.Length);

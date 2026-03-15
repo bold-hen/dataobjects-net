@@ -171,10 +171,27 @@ namespace Xtensive.Orm.Rse.Transformation
         return ProcesSelfConvertibleApply(provider, left, right);
       }
 
-      CompilableProvider convertedApply = !State.Predicates.ContainsKey(provider.ApplyParameter) 
+      // When the inner side contains a table-valued function like OPENJSON
+      // that references outer columns, we must keep it as CROSS APPLY.
+      if (ContainsOpenJsonProvider(right)) {
+        return ProcesSelfConvertibleApply(provider, left, right);
+      }
+
+      CompilableProvider convertedApply = !State.Predicates.ContainsKey(provider.ApplyParameter)
         ? new PredicateJoinProvider(left, right,(tLeft, tRight) => true, provider.ApplyType)
         : ConvertGenericApply(provider, left, right);
       return InsertCalculateProviders(provider, convertedApply);
+    }
+
+    private static bool ContainsOpenJsonProvider(CompilableProvider provider)
+    {
+      if (provider is OpenJsonProvider)
+        return true;
+      foreach (var source in provider.Sources) {
+        if (source is CompilableProvider cp && ContainsOpenJsonProvider(cp))
+          return true;
+      }
+      return false;
     }
 
     protected override CompilableProvider VisitFilter(FilterProvider provider)

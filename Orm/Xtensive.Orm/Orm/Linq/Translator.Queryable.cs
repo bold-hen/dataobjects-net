@@ -1691,6 +1691,12 @@ namespace Xtensive.Orm.Linq
         result = (ProjectionExpression) Visit(entitySetQuery);
       }
 
+      if (visitedExpression is JsonFieldExpression jsonFieldExpr
+          && jsonFieldExpr.Type.IsGenericType
+          && jsonFieldExpr.Type.GetGenericTypeDefinition() == WellKnownOrmTypes.JsonTypeArrayOfT) {
+        result = CreateOpenJsonProjection(jsonFieldExpr);
+      }
+
       if (visitedExpression.IsProjection()) {
         result = (ProjectionExpression) visitedExpression;
       }
@@ -1706,6 +1712,59 @@ namespace Xtensive.Orm.Linq
 
       throw new InvalidOperationException(
         string.Format(Strings.ExExpressionXIsNotASequence, expressionPart.ToString(true)));
+    }
+
+    private ProjectionExpression CreateOpenJsonProjection(JsonFieldExpression jsonFieldExpr)
+    {
+      var elementType = jsonFieldExpr.Type.GetGenericArguments()[0];
+      var properties = elementType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+      // Build OpenJsonColumnInfo list from element type properties
+      var columnInfos = new List<OpenJsonColumnInfo>(properties.Length);
+      foreach (var prop in properties) {
+        var sqlTypeName = MapClrTypeToSqlTypeName(prop.PropertyType);
+        columnInfos.Add(new OpenJsonColumnInfo(prop.Name, prop.PropertyType, sqlTypeName, "$." + prop.Name));
+      }
+
+      // Create OpenJsonProvider (leaf RSE provider for OPENJSON)
+      var openJsonProvider = new OpenJsonProvider(jsonFieldExpr.Field, elementType, columnInfos);
+
+      // Build a ConstructorExpression that maps each property to a ColumnExpression
+      var bindings = new Dictionary<MemberInfo, Expression>(properties.Length);
+      var nativeBindings = new Dictionary<MemberInfo, Expression>(properties.Length);
+      for (int i = 0; i < properties.Length; i++) {
+        var colExpr = ColumnExpression.Create(properties[i].PropertyType, i);
+        bindings[properties[i]] = colExpr;
+        nativeBindings[properties[i]] = colExpr;
+      }
+      var constructorExpr = new ConstructorExpression(
+        elementType, bindings, nativeBindings,
+        elementType.GetConstructor(Type.EmptyTypes),
+        Enumerable.Empty<Expression>());
+
+      var itemProjector = new ItemProjectorExpression(constructorExpr, openJsonProvider, context);
+      return new ProjectionExpression(
+        elementType,
+        itemProjector,
+        TranslatedQuery.EmptyTupleParameterBindings);
+    }
+
+    private static string MapClrTypeToSqlTypeName(Type type)
+    {
+      if (type == typeof(string)) return "nvarchar(max)";
+      if (type == typeof(int)) return "int";
+      if (type == typeof(long)) return "bigint";
+      if (type == typeof(short)) return "smallint";
+      if (type == typeof(byte)) return "tinyint";
+      if (type == typeof(bool)) return "bit";
+      if (type == typeof(decimal)) return "decimal(18,4)";
+      if (type == typeof(double)) return "float";
+      if (type == typeof(float)) return "real";
+      if (type == typeof(DateTime)) return "datetime2";
+      if (type == typeof(DateTimeOffset)) return "datetimeoffset";
+      if (type == typeof(Guid)) return "uniqueidentifier";
+      if (type == typeof(byte[])) return "varbinary(max)";
+      return "nvarchar(max)"; // fallback
     }
 
     private ProjectionExpression VisitLocalCollectionSequence<TItem>(Expression sequence)

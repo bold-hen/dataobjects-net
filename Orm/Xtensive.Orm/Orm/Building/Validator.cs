@@ -154,7 +154,20 @@ namespace Xtensive.Orm.Building
         return;
       }
 
-      if (fieldType.IsSubclassOf(WellKnownOrmTypes.JsonType)) {
+      var isJsonType = fieldType.IsSubclassOf(WellKnownOrmTypes.JsonType)
+        || (fieldType.IsArray && fieldType.GetElementType() is { } el && el.IsSubclassOf(WellKnownOrmTypes.JsonType));
+      // JsonTypeArray<T> where T must inherit from JsonType
+      var isJsonTypeArray = fieldType.IsGenericType
+        && fieldType.GetGenericTypeDefinition() == WellKnownOrmTypes.JsonTypeArrayOfT;
+      if (isJsonTypeArray) {
+        var elementType = fieldType.GetGenericArguments()[0];
+        if (!elementType.IsSubclassOf(WellKnownOrmTypes.JsonType)) {
+          throw new DomainBuilderException(string.Format(
+            "Type argument '{0}' of JsonTypeArray<T> must be a class inherited from JsonType.",
+            elementType.GetShortName()));
+        }
+      }
+      if (isJsonType || isJsonTypeArray) {
         if (isKeyField) {
           throw new DomainBuilderException(string.Format(Strings.ExKeyFieldCantBeOfXType, fieldType.GetShortName()));
         }

@@ -333,12 +333,15 @@ namespace Xtensive.Orm.Building.Definitions
       IsStructure = valueType.IsSubclassOf(WellKnownOrmTypes.Structure) || valueType == WellKnownOrmTypes.Structure;
       IsEntity = WellKnownOrmInterfaces.Entity.IsAssignableFrom(valueType);
 
-      // JsonType or JsonType[]
+      // JsonType, JsonType[], or JsonTypeArray<JsonType>
       var isJsonType = valueType.IsSubclassOf(WellKnownOrmTypes.JsonType);
       var isJsonArray = valueType.IsArray
         && valueType.GetElementType() is { } elementType
         && elementType.IsSubclassOf(WellKnownOrmTypes.JsonType);
-      IsJson = isJsonType || isJsonArray;
+      var isJsonTypeArray = !isJsonArray && valueType.IsGenericType
+        && valueType.GetGenericTypeDefinition() == WellKnownOrmTypes.JsonTypeArrayOfT
+        && valueType.GetGenericArguments()[0].IsSubclassOf(WellKnownOrmTypes.JsonType);
+      IsJson = isJsonType || isJsonArray || isJsonTypeArray;
 
       if ((valueType.IsClass || valueType.IsInterface) && !IsStructure && !IsJson)
         attributes |= FieldAttributes.Nullable;

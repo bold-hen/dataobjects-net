@@ -276,6 +276,16 @@ namespace Xtensive.Orm.Providers
         Visit(column);
     }
 
+    public void Visit(SqlOpenJson node)
+    {
+      if (node.JsonExpression != null)
+        Visit(node.JsonExpression);
+      if (node.Path != null)
+        Visit(node.Path);
+      foreach (var column in node.Columns)
+        Visit(column);
+    }
+
     public void Visit(SqlFunctionCall node)
     {
       foreach (var argument in node.Arguments)

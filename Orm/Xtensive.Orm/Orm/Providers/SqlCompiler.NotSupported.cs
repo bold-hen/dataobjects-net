@@ -28,5 +28,11 @@ namespace Xtensive.Orm.Providers
     {
       throw new NotSupportedException();
     }
+
+    /// <inheritdoc/>
+    protected override SqlProvider VisitOpenJson(OpenJsonProvider provider)
+    {
+      throw new NotSupportedException();
+    }
   }
 }

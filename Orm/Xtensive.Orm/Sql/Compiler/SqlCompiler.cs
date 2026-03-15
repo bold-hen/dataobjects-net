@@ -1179,6 +1179,12 @@ namespace Xtensive.Sql.Compiler
     public virtual void Visit(SqlFreeTextTable node) => throw SqlHelper.NotSupported(Strings.FullTextQueries);
 
     /// <summary>
+    /// Visits <see cref="SqlOpenJson"/> table and translates it.
+    /// </summary>
+    /// <param name="node">Table to visit.</param>
+    public virtual void Visit(SqlOpenJson node) => throw SqlHelper.NotSupported("OPENJSON");
+
+    /// <summary>
     /// Visits <see cref="SqlFunctionCall"/> expression and translates its parts.
     /// </summary>
     /// <param name="node">Expression to visit.</param>

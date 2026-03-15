@@ -136,6 +136,12 @@ namespace Xtensive.Orm.Rse.Transformation
       return provider;
     }
 
+    protected override CompilableProvider VisitOpenJson(OpenJsonProvider provider)
+    {
+      sortOrder = new DirectionCollection<int>();
+      return provider;
+    }
+
     protected override RawProvider VisitRaw(RawProvider provider)
     {
       sortOrder = new DirectionCollection<int>();

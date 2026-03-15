@@ -226,6 +226,14 @@ namespace Xtensive.Orm.Rse.Providers
     }
 
     /// <inheritdoc/>
+    protected override CompilableProvider VisitOpenJson(OpenJsonProvider provider)
+    {
+      OnRecursionEntrance(provider);
+      _ = OnRecursionExit(provider);
+      return provider;
+    }
+
+    /// <inheritdoc/>
     protected override CompilableProvider VisitPredicateJoin(PredicateJoinProvider provider)
     {
       OnRecursionEntrance(provider);

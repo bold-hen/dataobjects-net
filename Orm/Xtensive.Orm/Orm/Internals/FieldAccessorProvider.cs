@@ -22,6 +22,7 @@ namespace Xtensive.Orm.Internals
     private static readonly Type EntitySetFieldAccessorType = typeof(EntitySetFieldAccessor<>);
     private static readonly Type StructureFieldAccessorType = typeof(StructureFieldAccessor<>);
     private static readonly Type JsonFieldAccessorType = typeof(JsonFieldAccessor<>);
+    private static readonly Type JsonArrayFieldAccessorType = typeof(JsonArrayFieldAccessor<>);
     private static readonly Type EnumFieldAccessorType = typeof(EnumFieldAccessor<>);
     private static readonly Type KeyFieldAccessorType = typeof(KeyFieldAccessor<>);
     private static readonly Type DefaultFieldAccessorType = typeof(DefaultFieldAccessor<>);
@@ -43,6 +44,12 @@ namespace Xtensive.Orm.Internals
       }
 
       if (field.IsJson) {
+        // JsonTypeArray<T> uses a caching accessor (like EntitySet),
+        // while single JsonType / JsonType[] use the regular accessor.
+        if (field.ValueType.IsGenericType
+            && field.ValueType.GetGenericTypeDefinition() == WellKnownOrmTypes.JsonTypeArrayOfT) {
+          return CreateFieldAccessor(JsonArrayFieldAccessorType, field);
+        }
         return CreateFieldAccessor(JsonFieldAccessorType, field);
       }
 

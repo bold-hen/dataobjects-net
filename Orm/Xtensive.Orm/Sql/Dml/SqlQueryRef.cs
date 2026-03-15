@@ -75,6 +75,11 @@ namespace Xtensive.Sql.Dml
             containsTable.Columns.Select(originalColumn => SqlDml.TableColumn(this, originalColumn.Name)));
         }
 
+        if (queryExpression is SqlOpenJson openJsonTable) {
+          queryColumns.AddRange(
+            openJsonTable.Columns.Select(originalColumn => SqlDml.TableColumn(this, originalColumn.Name)));
+        }
+
         break;
       }
       columns = new SqlTableColumnCollection(queryColumns);

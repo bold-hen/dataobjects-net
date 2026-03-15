@@ -2,6 +2,8 @@
 // This code is distributed under MIT license terms.
 // See the License.txt file in the project root for more information.
 
+using System;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Xtensive.Orm.Linq
@@ -94,5 +96,24 @@ namespace Xtensive.Orm.Linq
         return null;
       }
     }
+
+    // Invariant-culture parse helpers for JSON value materialization.
+    // JSON_VALUE always returns numbers with '.' decimal separator,
+    // so we must use InvariantCulture regardless of the runtime culture.
+
+    public static byte ParseByte(string s) => byte.Parse(s, CultureInfo.InvariantCulture);
+    public static sbyte ParseSByte(string s) => sbyte.Parse(s, CultureInfo.InvariantCulture);
+    public static short ParseInt16(string s) => short.Parse(s, CultureInfo.InvariantCulture);
+    public static ushort ParseUInt16(string s) => ushort.Parse(s, CultureInfo.InvariantCulture);
+    public static int ParseInt32(string s) => int.Parse(s, CultureInfo.InvariantCulture);
+    public static uint ParseUInt32(string s) => uint.Parse(s, CultureInfo.InvariantCulture);
+    public static long ParseInt64(string s) => long.Parse(s, CultureInfo.InvariantCulture);
+    public static ulong ParseUInt64(string s) => ulong.Parse(s, CultureInfo.InvariantCulture);
+    public static float ParseSingle(string s) => float.Parse(s, CultureInfo.InvariantCulture);
+    public static double ParseDouble(string s) => double.Parse(s, CultureInfo.InvariantCulture);
+    public static decimal ParseDecimal(string s) => decimal.Parse(s, CultureInfo.InvariantCulture);
+    public static bool ParseBoolean(string s) => bool.Parse(s);
+    public static DateTime ParseDateTime(string s) => DateTime.Parse(s, CultureInfo.InvariantCulture);
+    public static DateTimeOffset ParseDateTimeOffset(string s) => DateTimeOffset.Parse(s, CultureInfo.InvariantCulture);
   }
 }

@@ -2121,6 +2121,24 @@ namespace Xtensive.Sql
       return new SqlContainsTable(dataTable, searchText, columnNames, targetColumnNames, topN);
     }
 
+    /// <summary>
+    /// Creates an OPENJSON table-valued function call with explicit column definitions.
+    /// </summary>
+    public static SqlOpenJson OpenJson(SqlExpression jsonExpression, SqlExpression path, IList<OpenJsonColumnDef> columnDefs)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(jsonExpression, "jsonExpression");
+      return new SqlOpenJson(jsonExpression, path, columnDefs);
+    }
+
+    /// <summary>
+    /// Creates an OPENJSON table-valued function call without a path.
+    /// </summary>
+    public static SqlOpenJson OpenJson(SqlExpression jsonExpression, IList<OpenJsonColumnDef> columnDefs)
+    {
+      ArgumentValidator.EnsureArgumentNotNull(jsonExpression, "jsonExpression");
+      return new SqlOpenJson(jsonExpression, null, columnDefs);
+    }
+
     public static SqlTableRef TableRef(DataTable dataTable)
     {
       ArgumentValidator.EnsureArgumentNotNull(dataTable, "dataTable");

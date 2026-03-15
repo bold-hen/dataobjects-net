@@ -52,6 +52,7 @@ namespace Xtensive.Orm.Rse.Providers
           ProviderType.Include => VisitInclude((IncludeProvider) cp),
           ProviderType.FreeText => VisitFreeText((FreeTextProvider) cp),
           ProviderType.ContainsTable => VisitContainsTable((ContainsTableProvider) cp),
+          ProviderType.OpenJson => VisitOpenJson((OpenJsonProvider) cp),
           ProviderType.Void => throw new NotSupportedException(Strings.ExProcessingOfVoidProviderIsNotSupported),
           _ => throw new ArgumentOutOfRangeException()
         };
@@ -232,5 +233,12 @@ namespace Xtensive.Orm.Rse.Providers
     /// <param name="provider">SearchCondition provider.</param>
     /// <returns></returns>
     protected abstract TResult VisitContainsTable(ContainsTableProvider provider);
+
+    /// <summary>
+    /// Visits the <see cref="OpenJsonProvider"/>.
+    /// </summary>
+    /// <param name="provider">OpenJson provider.</param>
+    /// <returns></returns>
+    protected abstract TResult VisitOpenJson(OpenJsonProvider provider);
   }
 }

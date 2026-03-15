@@ -37,6 +37,7 @@ namespace Xtensive.Orm.Rse.Providers
     Include,
     FreeText,
     ContainsTable,
+    OpenJson,
     Paging,
     Tag,
     Void,

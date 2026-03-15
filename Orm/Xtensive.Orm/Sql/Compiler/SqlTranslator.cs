@@ -1647,10 +1647,10 @@ namespace Xtensive.Sql.Compiler
     public virtual void Translate(SqlCompilerContext context, SqlQueryRef node, TableSection section)
     {
       switch (section) {
-        case TableSection.Entry when !(node.Query is SqlFreeTextTable || node.Query is SqlContainsTable):
+        case TableSection.Entry when !(node.Query is SqlFreeTextTable || node.Query is SqlContainsTable || node.Query is SqlOpenJson):
           _ = context.Output.AppendOpeningPunctuation("(");
           break;
-        case TableSection.Exit when !(node.Query is SqlFreeTextTable || node.Query is SqlContainsTable):
+        case TableSection.Exit when !(node.Query is SqlFreeTextTable || node.Query is SqlContainsTable || node.Query is SqlOpenJson):
           _ = context.Output.Append(")");
           break;
         case TableSection.AliasDeclaration:

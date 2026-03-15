@@ -373,6 +373,12 @@ namespace Xtensive.Sql
     void Visit(SqlFreeTextTable node);
 
     /// <summary>
+    /// Visits <see cref="SqlOpenJson"/> table.
+    /// </summary>
+    /// <param name="node">Table to visit.</param>
+    void Visit(SqlOpenJson node);
+
+    /// <summary>
     /// Visits <see cref="SqlFunctionCall"/> expression.
     /// </summary>
     /// <param name="node">Expression to visit.</param>

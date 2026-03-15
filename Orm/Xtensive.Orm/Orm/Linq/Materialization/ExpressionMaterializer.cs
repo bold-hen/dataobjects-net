@@ -431,7 +431,21 @@ namespace Xtensive.Orm.Linq.Materialization
 
       if (expression.JsonPath == "$") {
         // Whole JSON object - deserialize from string
-        if (WellKnownOrmTypes.JsonType.IsAssignableFrom(expression.Type)) {
+        var isJsonType = WellKnownOrmTypes.JsonType.IsAssignableFrom(expression.Type);
+        var isJsonArray = expression.Type.IsArray
+          && expression.Type.GetElementType() is { } elemType
+          && WellKnownOrmTypes.JsonType.IsAssignableFrom(elemType);
+        var isJsonTypeArray = expression.Type.IsGenericType
+          && expression.Type.GetGenericTypeDefinition() == WellKnownOrmTypes.JsonTypeArrayOfT
+          && WellKnownOrmTypes.JsonType.IsAssignableFrom(expression.Type.GetGenericArguments()[0]);
+        if (isJsonType || isJsonArray || isJsonTypeArray) {
+          if (isJsonTypeArray) {
+            // Use JsonTypeArray<T>.FromJson(string) for proper materialization
+            var elementType = expression.Type.GetGenericArguments()[0];
+            var fromJsonMethod = typeof(JsonTypeArray<>).MakeGenericType(elementType)
+              .GetMethod("FromJson", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            return Expression.Call(fromJsonMethod, jsonStringAccess);
+          }
           var deserializeMethod = typeof(System.Text.Json.JsonSerializer)
             .GetMethod(nameof(System.Text.Json.JsonSerializer.Deserialize), new[] { typeof(string), typeof(System.Text.Json.JsonSerializerOptions) })
             .MakeGenericMethod(expression.Type);
@@ -476,14 +490,44 @@ namespace Xtensive.Orm.Linq.Materialization
     private static MethodInfo FindParseMethod(Type targetType)
     {
       var type = targetType.StripNullable();
-      var method = type.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
-      if (method != null && method.ReturnType == type) {
-        if (targetType.IsNullable()) {
-          // For nullable types, we can't directly use Parse because null string should return null
-          return null;
-        }
-        return method;
+      if (targetType.IsNullable()) {
+        // For nullable types, we can't directly use Parse because null string should return null
+        return null;
       }
+
+      // Use invariant-culture parse helpers from JsonExpressionHelper
+      // to avoid culture-sensitive parsing issues (e.g. decimal separator '.' vs ',').
+      var helperMethodName = GetInvariantParseMethodName(type);
+      if (helperMethodName != null) {
+        var method = typeof(JsonExpressionHelper).GetMethod(helperMethodName,
+          BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+        if (method != null)
+          return method;
+      }
+
+      // Fallback: use the type's own Parse(string) method
+      var fallback = type.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+      if (fallback != null && fallback.ReturnType == type)
+        return fallback;
+      return null;
+    }
+
+    private static string GetInvariantParseMethodName(Type type)
+    {
+      if (type == typeof(byte)) return nameof(JsonExpressionHelper.ParseByte);
+      if (type == typeof(sbyte)) return nameof(JsonExpressionHelper.ParseSByte);
+      if (type == typeof(short)) return nameof(JsonExpressionHelper.ParseInt16);
+      if (type == typeof(ushort)) return nameof(JsonExpressionHelper.ParseUInt16);
+      if (type == typeof(int)) return nameof(JsonExpressionHelper.ParseInt32);
+      if (type == typeof(uint)) return nameof(JsonExpressionHelper.ParseUInt32);
+      if (type == typeof(long)) return nameof(JsonExpressionHelper.ParseInt64);
+      if (type == typeof(ulong)) return nameof(JsonExpressionHelper.ParseUInt64);
+      if (type == typeof(float)) return nameof(JsonExpressionHelper.ParseSingle);
+      if (type == typeof(double)) return nameof(JsonExpressionHelper.ParseDouble);
+      if (type == typeof(decimal)) return nameof(JsonExpressionHelper.ParseDecimal);
+      if (type == typeof(bool)) return nameof(JsonExpressionHelper.ParseBoolean);
+      if (type == typeof(DateTime)) return nameof(JsonExpressionHelper.ParseDateTime);
+      if (type == typeof(DateTimeOffset)) return nameof(JsonExpressionHelper.ParseDateTimeOffset);
       return null;
     }
 

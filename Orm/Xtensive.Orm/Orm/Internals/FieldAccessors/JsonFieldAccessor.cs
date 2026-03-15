@@ -2,7 +2,9 @@
 // This code is distributed under MIT license terms.
 // See the License.txt file in the project root for more information.
 
+using System;
 using System.Text.Json;
+using Xtensive.Orm.Model;
 
 namespace Xtensive.Orm.Internals.FieldAccessors
 {
@@ -23,7 +25,7 @@ namespace Xtensive.Orm.Internals.FieldAccessors
       // Compare by serialized form
       var oldJson = JsonSerializer.Serialize(oldValue, oldValue.GetType(), SerializerOptions);
       var newJson = JsonSerializer.Serialize(newValue, newValue.GetType(), SerializerOptions);
-      return string.Equals(oldJson, newJson, System.StringComparison.Ordinal);
+      return string.Equals(oldJson, newJson, StringComparison.Ordinal);
     }
 
     /// <inheritdoc/>
@@ -34,6 +36,7 @@ namespace Xtensive.Orm.Internals.FieldAccessors
       var jsonString = tuple.GetValueOrDefault<string>(fieldIndex);
       if (string.IsNullOrEmpty(jsonString))
         return default;
+
       return JsonSerializer.Deserialize<T>(jsonString, SerializerOptions);
     }
 
@@ -45,6 +48,7 @@ namespace Xtensive.Orm.Internals.FieldAccessors
         obj.Tuple.SetValue(fieldIndex, (string) null);
         return;
       }
+
       var jsonString = JsonSerializer.Serialize(value, typeof(T), SerializerOptions);
       obj.Tuple.SetValue(fieldIndex, jsonString);
     }

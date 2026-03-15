@@ -34,6 +34,7 @@ namespace Xtensive.Orm.Internals
 
     public static readonly Type Structure = typeof(Structure);
     public static readonly Type JsonType = typeof(JsonType);
+    public static readonly Type JsonTypeArrayOfT = typeof(JsonTypeArray<>);
 
     public static readonly Type Tuple = typeof(Tuple);
 

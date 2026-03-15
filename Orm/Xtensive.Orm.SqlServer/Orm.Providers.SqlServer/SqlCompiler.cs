@@ -87,6 +87,38 @@ namespace Xtensive.Orm.Providers.SqlServer
       return CreateProvider(select, bindings, provider);
     }
 
+    protected override SqlProvider VisitOpenJson(OpenJsonProvider provider)
+    {
+      // Get the JSON column expression from the outer query (via Apply's outer reference)
+      SqlExpression jsonColumnExpr;
+      if (outerReferenceStack.Count > 0) {
+        var outerRef = outerReferenceStack.Peek();
+        var outerProvider = outerRef.First;
+        var useQueryReference = outerRef.Second;
+        jsonColumnExpr = useQueryReference
+          ? outerProvider.PermanentReference[provider.JsonColumnIndex]
+          : ExtractColumnExpression(outerProvider.Request.Statement.Columns[provider.JsonColumnIndex]);
+      }
+      else {
+        jsonColumnExpr = SqlDml.Native("*");
+      }
+
+      // Build OPENJSON column definitions from the provider's column infos
+      var columnDefs = provider.ColumnInfos
+        .Select(ci => new OpenJsonColumnDef(ci.Name, ci.SqlTypeName, ci.JsonPath))
+        .ToList();
+
+      var openJsonTable = SqlDml.OpenJson(jsonColumnExpr, columnDefs);
+      var fromTableRef = SqlDml.QueryRef(openJsonTable);
+      var select = SqlDml.Select(fromTableRef);
+
+      foreach (var column in fromTableRef.Columns) {
+        select.Columns.Add(column);
+      }
+
+      return CreateProvider(select, Array.Empty<QueryParameterBinding>(), provider);
+    }
+
     protected override SqlExpression ProcessAggregate(
       SqlProvider source, List<SqlExpression> sourceColumns, AggregateColumn aggregateColumn)
     {

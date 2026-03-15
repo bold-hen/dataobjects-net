@@ -84,6 +84,76 @@ namespace Xtensive.Orm.Providers
 
     #endregion
 
+    #region Parse mappings
+
+    [Compiler(typeof(byte), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression ByteParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToByte(str);
+    }
+
+    [Compiler(typeof(sbyte), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression SByteParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToSbyte(str);
+    }
+
+    [Compiler(typeof(short), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression ShortParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToShort(str);
+    }
+
+    [Compiler(typeof(ushort), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression UShortParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToUshort(str);
+    }
+
+    [Compiler(typeof(int), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression IntParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToInt(str);
+    }
+
+    [Compiler(typeof(uint), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression UIntParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToUint(str);
+    }
+
+    [Compiler(typeof(long), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression LongParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToLong(str);
+    }
+
+    [Compiler(typeof(ulong), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression ULongParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToUlong(str);
+    }
+
+    [Compiler(typeof(float), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression FloatParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToFloat(str);
+    }
+
+    [Compiler(typeof(double), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression DoubleParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToDouble(str);
+    }
+
+    [Compiler(typeof(bool), "Parse", TargetKind.Static | TargetKind.Method)]
+    public static SqlExpression BoolParse([Type(typeof(string))] SqlExpression str)
+    {
+      return ExpressionTranslationHelpers.ToBool(str);
+    }
+
+    #endregion
+
     #region CompareTo mappings
 
     [Compiler(typeof(byte), "CompareTo")]
