@@ -114,6 +114,7 @@ namespace Xtensive.Orm
     private async ValueTask Persist(PersistReason reason, bool isAsync, CancellationToken token = default)
     {
       EnsureNotDisposed();
+      FlushDirtyJsonFields();
       if (IsPersisting || EntityChangeRegistry.Count == 0) {
         return;
       }
@@ -271,6 +272,14 @@ namespace Xtensive.Orm
         disableAutoSaveChanges = false;
         InvalidateEntitySetsWithInvalidState();
       });
+    }
+
+    private void FlushDirtyJsonFields()
+    {
+      if (jsonFieldAdapters == null || jsonFieldAdapters.Count == 0)
+        return;
+      foreach (var adapter in jsonFieldAdapters)
+        adapter.FlushIfDirty();
     }
 
     private void ApplyEntitySetsChanges()

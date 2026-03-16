@@ -27,9 +27,17 @@ namespace Xtensive.Orm
     // within DisableSaveChanges() scope.
     private HashSet<EntitySetBase> entitySetsWithInvalidState;
 
+    // JSON field value adapters that need snapshot-based dirty checking before persist
+    private HashSet<IJsonFieldValueAdapter> jsonFieldAdapters;
+
     internal ICache<Key, EntityState> EntityStateCache { get; private set; }
     internal EntityChangeRegistry EntityChangeRegistry { get; private set; }
     internal EntitySetChangeRegistry EntitySetChangeRegistry { get; private set; }
+
+    internal void RegisterJsonFieldAdapter(IJsonFieldValueAdapter adapter)
+    {
+      jsonFieldAdapters.Add(adapter);
+    }
 
     internal void Invalidate()
     {

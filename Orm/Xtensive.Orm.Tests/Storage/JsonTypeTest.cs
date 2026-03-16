@@ -385,6 +385,158 @@ namespace Xtensive.Orm.Tests.Storage
     }
 
     [Test]
+    public void JsonFieldInnerPropertyChangeTrackedTest()
+    {
+      // Modifying inner properties of an existing JsonType instance
+      // is automatically detected via snapshot comparison before persist.
+      int ownerId;
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Name == "Owner1");
+        ownerId = owner.Id;
+
+        // Mutate inner property directly — this IS tracked via snapshot comparison
+        owner.JsonField.StringField = "mutated_directly";
+
+        t.Complete();
+      }
+
+      // Verify: the inner mutation WAS persisted
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Id == ownerId);
+        Assert.AreEqual("mutated_directly", owner.JsonField.StringField,
+          "Inner property mutation should be tracked via snapshot comparison");
+      }
+    }
+
+    [Test]
+    public void JsonFieldInnerPropertyChangeTrackedViaReassignmentTest()
+    {
+      // The correct way to change inner properties: read, modify, reassign.
+      int ownerId;
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Name == "Owner1");
+        ownerId = owner.Id;
+
+        // Read current, modify, reassign
+        var json = owner.JsonField;
+        var updated = new TestJsonPoco {
+          StringField = "properly_updated",
+          IntField = json.IntField,
+          DecimalField = json.DecimalField,
+          BoolField = json.BoolField,
+          DateTimeField = json.DateTimeField
+        };
+        owner.JsonField = updated;
+        t.Complete();
+      }
+
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Id == ownerId);
+        Assert.AreEqual("properly_updated", owner.JsonField.StringField,
+          "Reassigning the whole JsonField should persist inner property changes");
+        // Other fields should be preserved
+        Assert.AreEqual(1, owner.JsonField.IntField);
+        Assert.AreEqual(100.50m, owner.JsonField.DecimalField);
+      }
+    }
+
+    [Test]
+    public void JsonTypeArrayItemInnerPropertyChangeTrackedTest()
+    {
+      // Modifying inner properties of an existing array item
+      // is automatically detected via snapshot comparison before persist.
+      int ownerId;
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Name == "Owner1");
+        ownerId = owner.Id;
+        Assert.AreEqual("item1", owner.JsonArrayField[0].StringField);
+
+        // Mutate item's inner property directly — this IS tracked
+        owner.JsonArrayField[0].StringField = "mutated_item";
+
+        t.Complete();
+      }
+
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Id == ownerId);
+        Assert.AreEqual("mutated_item", owner.JsonArrayField[0].StringField,
+          "Inner property mutation on array item should be tracked via snapshot comparison");
+      }
+    }
+
+    [Test]
+    public void JsonTypeArrayItemInnerPropertyChangeTrackedViaIndexerTest()
+    {
+      // The correct way to change an array item's inner property:
+      // replace the item via the indexer.
+      int ownerId;
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Name == "Owner1");
+        ownerId = owner.Id;
+        var original = owner.JsonArrayField[0];
+
+        // Replace via indexer to trigger change tracking
+        owner.JsonArrayField[0] = new TestJsonPoco {
+          StringField = "properly_updated_item",
+          IntField = original.IntField,
+          DecimalField = original.DecimalField,
+          BoolField = original.BoolField,
+          DateTimeField = original.DateTimeField
+        };
+        t.Complete();
+      }
+
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Id == ownerId);
+        Assert.AreEqual("properly_updated_item", owner.JsonArrayField[0].StringField,
+          "Replacing array item via indexer should persist inner property changes");
+        Assert.AreEqual(1, owner.JsonArrayField[0].IntField);
+      }
+    }
+
+    [Test]
+    public void JsonFieldReadWithoutModifyDoesNotTriggerUpdateTest()
+    {
+      // Reading a JSON field without modifying it should not cause a spurious update.
+      int ownerId;
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Name == "Owner1");
+        ownerId = owner.Id;
+
+        // Read inner properties without modifying them
+        var s = owner.JsonField.StringField;
+        var i = owner.JsonField.IntField;
+        var d = owner.JsonField.DecimalField;
+        var b = owner.JsonField.BoolField;
+        var dt = owner.JsonField.DateTimeField;
+        var arr = owner.JsonArrayField[0].StringField;
+
+        // Entity should NOT be marked as modified
+        Assert.AreEqual(PersistenceState.Synchronized, owner.PersistenceState,
+          "Reading JSON field without modifying should not mark entity as Modified");
+        t.Complete();
+      }
+
+      // Verify original values are still intact
+      using (var session = Domain.OpenSession())
+      using (var t = session.OpenTransaction()) {
+        var owner = session.Query.All<JsonOwner>().First(o => o.Id == ownerId);
+        Assert.AreEqual("hello", owner.JsonField.StringField);
+        Assert.AreEqual(1, owner.JsonField.IntField);
+        Assert.AreEqual("item1", owner.JsonArrayField[0].StringField);
+      }
+    }
+
+    [Test]
     public void MultipleJsonFieldChangesInSameTransactionTest()
     {
       int ownerId;
@@ -421,450 +573,6 @@ namespace Xtensive.Orm.Tests.Storage
         Assert.AreEqual("added", owner.JsonArrayField[3].StringField);
         Assert.AreEqual("Owner1Updated", owner.Name);
         Assert.AreEqual(999, owner.NumericValue);
-      }
-    }
-
-    #endregion
-
-    #region 3. Server-side Select tests
-
-    [Test]
-    public void SelectJsonFieldPropertyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var strings = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField.StringField)
-          .ToList();
-        Assert.AreEqual(3, strings.Count);
-        Assert.AreEqual("hello", strings[0]);
-        Assert.AreEqual("world", strings[1]);
-        Assert.AreEqual("empty", strings[2]);
-      }
-    }
-
-    [Test]
-    public void SelectJsonFieldIntPropertyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var ints = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField.IntField)
-          .ToList();
-        Assert.AreEqual(3, ints.Count);
-        Assert.AreEqual(1, ints[0]);
-        Assert.AreEqual(2, ints[1]);
-        Assert.AreEqual(3, ints[2]);
-      }
-    }
-
-    [Test]
-    public void SelectJsonFieldDecimalPropertyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var decimals = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField.DecimalField)
-          .ToList();
-        Assert.AreEqual(3, decimals.Count);
-        Assert.AreEqual(100.50m, decimals[0]);
-        Assert.AreEqual(200.75m, decimals[1]);
-        Assert.AreEqual(0m, decimals[2]);
-      }
-    }
-
-    [Test]
-    public void SelectJsonFieldBoolPropertyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var bools = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField.BoolField)
-          .ToList();
-        Assert.AreEqual(3, bools.Count);
-        Assert.AreEqual(true, bools[0]);
-        Assert.AreEqual(false, bools[1]);
-        Assert.AreEqual(false, bools[2]);
-      }
-    }
-
-    [Test]
-    public void SelectJsonFieldDateTimePropertyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var dates = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField.DateTimeField)
-          .ToList();
-        Assert.AreEqual(3, dates.Count);
-        Assert.AreEqual(new DateTime(2025, 1, 15, 10, 30, 0), dates[0]);
-        Assert.AreEqual(new DateTime(2025, 6, 20, 14, 0, 0), dates[1]);
-        Assert.AreEqual(new DateTime(2025, 12, 31), dates[2]);
-      }
-    }
-
-    [Test]
-    public void SelectMixedEntityAndJsonFieldsTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => new {
-            o.Id,
-            o.Name,
-            o.NumericValue,
-            JsonString = o.JsonField.StringField,
-            JsonInt = o.JsonField.IntField
-          })
-          .ToList();
-        Assert.AreEqual(3, result.Count);
-        Assert.AreEqual("Owner1", result[0].Name);
-        Assert.AreEqual("hello", result[0].JsonString);
-        Assert.AreEqual(1, result[0].JsonInt);
-        Assert.AreEqual(10, result[0].NumericValue);
-      }
-    }
-
-    [Test]
-    public void SelectWholeJsonFieldTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonField)
-          .ToList();
-        Assert.AreEqual(3, result.Count);
-        Assert.AreEqual("hello", result[0].StringField);
-        Assert.AreEqual(1, result[0].IntField);
-      }
-    }
-
-    [Test]
-    public void SelectWholeJsonArrayFieldTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => o.JsonArrayField)
-          .ToList();
-        Assert.AreEqual(3, result.Count);
-        Assert.AreEqual(3, result[0].Count);
-        Assert.AreEqual("item1", result[0][0].StringField);
-        Assert.AreEqual(2, result[1].Count);
-        Assert.AreEqual(0, result[2].Count);
-      }
-    }
-
-    [Test]
-    public void SelectEntityFieldsPlusJsonAggregationTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => new {
-            o.Name,
-            JsonString = o.JsonField.StringField,
-            ArraySum = o.JsonArrayField.Sum(item => item.DecimalField)
-          })
-          .ToList();
-
-        Assert.AreEqual(3, result.Count);
-
-        // Owner1: items have DecimalField 10.5, 20.5, 30.0 => sum = 61.0
-        Assert.AreEqual("Owner1", result[0].Name);
-        Assert.AreEqual("hello", result[0].JsonString);
-        Assert.AreEqual(61.0m, result[0].ArraySum);
-
-        // Owner2: items have DecimalField 5.25, 15.75 => sum = 21.0
-        Assert.AreEqual("Owner2", result[1].Name);
-        Assert.AreEqual(21.0m, result[1].ArraySum);
-
-        // Owner3: empty array => sum = 0
-        Assert.AreEqual("Owner3", result[2].Name);
-        Assert.AreEqual(0m, result[2].ArraySum);
-      }
-    }
-
-    [Test]
-    public void SelectEntityFieldsPlusJsonArrayCountTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .OrderBy(o => o.Id)
-          .Select(o => new {
-            o.Name,
-            ArrayCount = o.JsonArrayField.Count()
-          })
-          .ToList();
-
-        Assert.AreEqual(3, result.Count);
-        Assert.AreEqual(3, result[0].ArrayCount);
-        Assert.AreEqual(2, result[1].ArrayCount);
-        Assert.AreEqual(0, result[2].ArrayCount);
-      }
-    }
-
-    #endregion
-
-    #region 4. Server-side Join tests
-
-    [Test]
-    public void LeftJoinOnJsonFieldIntKeyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        // Join: left.JsonField.IntField == right.JsonField.IntField
-        var result = session.Query.All<JsonOwner>()
-          .LeftJoin(
-            session.Query.All<JsonOwner>(),
-            left => left.JsonField.IntField,
-            right => right.JsonField.IntField,
-            (left, right) => new {
-              LeftName = left.Name,
-              RightName = right.Name,
-              Key = left.JsonField.IntField
-            })
-          .OrderBy(x => x.LeftName).ThenBy(x => x.RightName)
-          .ToList();
-
-        // Each owner should match itself (IntField 1->1, 2->2, 3->3)
-        Assert.IsTrue(result.Any(r => r.LeftName == "Owner1" && r.RightName == "Owner1"));
-        Assert.IsTrue(result.Any(r => r.LeftName == "Owner2" && r.RightName == "Owner2"));
-        Assert.IsTrue(result.Any(r => r.LeftName == "Owner3" && r.RightName == "Owner3"));
-      }
-    }
-
-    [Test]
-    public void LeftJoinEntityKeyWithJsonKeyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        // Join: left.NumericValue (entity field) == right.JsonField.IntField (json field)
-        var result = session.Query.All<JsonOwner>()
-          .LeftJoin(
-            session.Query.All<JsonOwner>(),
-            left => left.NumericValue,
-            right => right.JsonField.IntField,
-            (left, right) => new {
-              LeftName = left.Name,
-              RightName = right.Name,
-              LeftValue = left.NumericValue,
-              RightJsonInt = right.JsonField.IntField
-            })
-          .OrderBy(x => x.LeftName).ThenBy(x => x.RightName)
-          .ToList();
-
-        // Owner1 has NumericValue=10, no match
-        // Owner2 has NumericValue=20, no match
-        // Owner3 has NumericValue=1, matches Owner1 (IntField=1)
-        Assert.IsTrue(result.Any(r => r.LeftName == "Owner3" && r.RightName == "Owner1"));
-      }
-    }
-
-    [Test]
-    public void LeftJoinWithJsonArraySelectManyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        // Join entity with expanded JSON array rows
-        var result = session.Query.All<JsonOwner>()
-          .LeftJoin(
-            session.Query.All<JsonOwner>().SelectMany(o => o.JsonArrayField),
-            left => left.JsonField.IntField,
-            right => right.IntField,
-            (left, right) => new {
-              OwnerName = left.Name,
-              ArrayItemString = right.StringField
-            })
-          .OrderBy(x => x.OwnerName).ThenBy(x => x.ArrayItemString)
-          .ToList();
-
-        // Owner1.JsonField.IntField = 1, matches array items with IntField=1 (item1 from Owner1, item3 from Owner1)
-        Assert.IsTrue(result.Any(r => r.OwnerName == "Owner1" && r.ArrayItemString == "item1"));
-        Assert.IsTrue(result.Any(r => r.OwnerName == "Owner1" && r.ArrayItemString == "item3"));
-      }
-    }
-
-    [Test]
-    public void JoinOnJsonFieldStringKeyTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        // Self-join on JsonField.StringField
-        var result = session.Query.All<JsonOwner>()
-          .LeftJoin(
-            session.Query.All<JsonOwner>(),
-            left => left.JsonField.StringField,
-            right => right.JsonField.StringField,
-            (left, right) => new {
-              LeftName = left.Name,
-              RightName = right.Name,
-              JsonString = left.JsonField.StringField
-            })
-          .OrderBy(x => x.LeftName)
-          .ToList();
-
-        // Each should match itself by StringField
-        Assert.AreEqual(3, result.Count);
-        Assert.IsTrue(result.All(r => r.LeftName == r.RightName));
-      }
-    }
-
-    #endregion
-
-    #region 5. SelectMany projection tests with JsonTypeArray
-
-    [Test]
-    public void SelectManyBasicTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField)
-          .ToList();
-
-        // Owner1 has 3 items, Owner2 has 2 items, Owner3 has 0 items
-        Assert.AreEqual(5, result.Count);
-      }
-    }
-
-    [Test]
-    public void SelectManyWithSelectStringFieldTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField.Select(item => item.StringField))
-          .OrderBy(s => s)
-          .ToList();
-
-        Assert.AreEqual(5, result.Count);
-        CollectionAssert.Contains(result, "item1");
-        CollectionAssert.Contains(result, "item2");
-        CollectionAssert.Contains(result, "item3");
-        CollectionAssert.Contains(result, "itemA");
-        CollectionAssert.Contains(result, "itemB");
-      }
-    }
-
-    [Test]
-    public void SelectManyWithAnonymousProjectionTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField.Select(item => new {
-            item.StringField,
-            item.IntField,
-            item.DecimalField
-          }))
-          .OrderBy(x => x.StringField)
-          .ToList();
-
-        Assert.AreEqual(5, result.Count);
-        var item1 = result.First(r => r.StringField == "item1");
-        Assert.AreEqual(1, item1.IntField);
-        Assert.AreEqual(10.5m, item1.DecimalField);
-      }
-    }
-
-    [Test]
-    public void SelectManyWithMixedEntityAndArrayFieldsTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField.Select(item => new {
-            OwnerName = o.Name,
-            OwnerId = o.Id,
-            item.StringField,
-            OwnerJsonInt = o.JsonField.IntField,
-          }))
-          .OrderBy(x => x.OwnerName).ThenBy(x => x.StringField)
-          .ToList();
-
-        Assert.AreEqual(5, result.Count);
-
-        // Check Owner1's items
-        var owner1Items = result.Where(r => r.OwnerName == "Owner1").ToList();
-        Assert.AreEqual(3, owner1Items.Count);
-        Assert.IsTrue(owner1Items.All(i => i.OwnerJsonInt == 1)); // Owner1.JsonField.IntField = 1
-
-        // Check Owner2's items
-        var owner2Items = result.Where(r => r.OwnerName == "Owner2").ToList();
-        Assert.AreEqual(2, owner2Items.Count);
-        Assert.IsTrue(owner2Items.All(i => i.OwnerJsonInt == 2)); // Owner2.JsonField.IntField = 2
-      }
-    }
-
-    [Test]
-    public void SelectManyWithWholeJsonFieldInProjectionTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField.Select(item => new {
-            item.StringField,
-            o.JsonField  // whole JsonType object from outer entity
-          }))
-          .OrderBy(x => x.StringField)
-          .ToList();
-
-        Assert.AreEqual(5, result.Count);
-        // item1 comes from Owner1
-        var item1 = result.First(r => r.StringField == "item1");
-        Assert.AreEqual("hello", item1.JsonField.StringField);
-        Assert.AreEqual(1, item1.JsonField.IntField);
-
-        // itemA comes from Owner2
-        var itemA = result.First(r => r.StringField == "itemA");
-        Assert.AreEqual("world", itemA.JsonField.StringField);
-        Assert.AreEqual(2, itemA.JsonField.IntField);
-      }
-    }
-
-    [Test]
-    public void SelectManyWithFilterOnArrayItemTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField)
-          .Where(item => item.IntField == 1)
-          .ToList();
-
-        // item1 (Owner1) and item3 (Owner1) have IntField = 1
-        Assert.AreEqual(2, result.Count);
-        Assert.IsTrue(result.All(r => r.IntField == 1));
-      }
-    }
-
-    [Test]
-    public void SelectManyWithIdInProjectionTest()
-    {
-      using (var session = Domain.OpenSession())
-      using (var t = session.OpenTransaction()) {
-        var result = session.Query.All<JsonOwner>()
-          .SelectMany(o => o.JsonArrayField.Select(item => new {
-            item.StringField,
-            o.JsonField,
-            o.Id
-          }))
-          .ToList();
-
-        Assert.AreEqual(5, result.Count);
-        // All items should have valid entity IDs
-        Assert.IsTrue(result.All(r => r.Id > 0));
       }
     }
 

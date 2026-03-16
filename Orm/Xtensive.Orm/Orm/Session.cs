@@ -560,6 +560,7 @@ namespace Xtensive.Orm
       EntitySetChangeRegistry = new EntitySetChangeRegistry(this);
       ReferenceFieldsChangesRegistry = new ReferenceFieldsChangesRegistry(this);
       entitySetsWithInvalidState = new HashSet<EntitySetBase>();
+      jsonFieldAdapters = new HashSet<IJsonFieldValueAdapter>();
 
       // Events
       EntityEvents = new EntityEventBroker();

@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Xtensive LLC.
+// Copyright (C) 2024-2025 Xtensive LLC.
 // This code is distributed under MIT license terms.
 // See the License.txt file in the project root for more information.
 
@@ -8,12 +8,20 @@ using Xtensive.Orm.Model;
 
 namespace Xtensive.Orm.Internals.FieldAccessors
 {
-  internal class JsonFieldAccessor<T> : FieldAccessor<T>
+  internal class JsonFieldAccessor<T> : CachingFieldAccessor<T>
   {
     private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions {
       PropertyNamingPolicy = null,
       WriteIndented = false,
     };
+
+    /// <inheritdoc/>
+    public override T GetValue(Persistent obj)
+    {
+      var field = Field;
+      var valueAdapter = (JsonFieldValueAdapter<T>) obj.GetFieldValueAdapter(field, Constructor);
+      return valueAdapter.Value;
+    }
 
     /// <inheritdoc/>
     public override bool AreSameValues(object oldValue, object newValue)
@@ -29,28 +37,31 @@ namespace Xtensive.Orm.Internals.FieldAccessors
     }
 
     /// <inheritdoc/>
-    public override T GetValue(Persistent obj)
-    {
-      var fieldIndex = Field.MappingInfo.Offset;
-      var tuple = obj.Tuple;
-      var jsonString = tuple.GetValueOrDefault<string>(fieldIndex);
-      if (string.IsNullOrEmpty(jsonString))
-        return default;
-
-      return JsonSerializer.Deserialize<T>(jsonString, SerializerOptions);
-    }
-
-    /// <inheritdoc/>
     public override void SetValue(Persistent obj, T value)
     {
       var fieldIndex = Field.MappingInfo.Offset;
+      string jsonString;
       if (value == null) {
+        jsonString = null;
         obj.Tuple.SetValue(fieldIndex, (string) null);
-        return;
+      }
+      else {
+        jsonString = JsonSerializer.Serialize(value, typeof(T), SerializerOptions);
+        obj.Tuple.SetValue(fieldIndex, jsonString);
       }
 
-      var jsonString = JsonSerializer.Serialize(value, typeof(T), SerializerOptions);
-      obj.Tuple.SetValue(fieldIndex, jsonString);
+      // Keep the cached adapter in sync if it already exists
+      var adapter = obj.TryGetFieldValueAdapter(Field) as JsonFieldValueAdapter<T>;
+      if (adapter != null) {
+        adapter.UpdateValue(value, jsonString);
+      }
+    }
+
+    // Type initializer
+
+    static JsonFieldAccessor()
+    {
+      Constructor = (owner, field) => new JsonFieldValueAdapter<T>(owner, field);
     }
   }
 }

@@ -770,6 +770,18 @@ namespace Xtensive.Orm
       return adapter;
     }
 
+    internal IFieldValueAdapter TryGetFieldValueAdapter(FieldInfo field)
+    {
+      if (fieldAdapters == null)
+        return null;
+      if (field.ReflectedType.IsInterface)
+        field = TypeInfo.FieldMap[field];
+      var index = field.AdapterIndex;
+      if (index < 0 || index >= fieldAdapters.Length)
+        return null;
+      return fieldAdapters[index];
+    }
+
     internal TypeInfo GetTypeInfo()
     {
       return Session.Domain.Model.Types[GetType()];
