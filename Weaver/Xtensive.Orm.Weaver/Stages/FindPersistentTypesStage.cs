@@ -49,6 +49,8 @@ namespace Xtensive.Orm.Weaver.Stages
         processedTypes.Add(identity, result);
         if (expectPersistentProperties)
           InspectProperties(context, result);
+        else if (kind==PersistentTypeKind.JsonType)
+          InspectJsonTypeProperties(context, result);
         return result;
       }
       else {
@@ -116,6 +118,8 @@ namespace Xtensive.Orm.Weaver.Stages
         return PersistentTypeKind.EntitySet;
       if (comparer.Equals(name, WellKnown.EntityInterfaceType))
         return PersistentTypeKind.EntityInterface;
+      if (comparer.Equals(name, WellKnown.JsonTypeType))
+        return PersistentTypeKind.JsonType;
       return PersistentTypeKind.None;
     }
 
@@ -198,6 +202,20 @@ namespace Xtensive.Orm.Weaver.Stages
 
       if (baseProperty.IsKey)
         property.IsKey = true;
+    }
+
+    private void InspectJsonTypeProperties(ProcessorContext context, TypeInfo type)
+    {
+      foreach (var property in type.Definition.Properties) {
+        var propertyInfo = new PropertyInfo(type, property);
+        // skip indexers and static members
+        if (propertyInfo.AnyAccessor==null || property.HasParameters)
+          continue;
+        propertyInfo.IsAutomatic = autoPropertyChecker.Invoke(type.Definition, property);
+        // For JsonType, ALL auto-properties are considered persistent (no [Field] attribute needed)
+        propertyInfo.IsPersistent = propertyInfo.IsInstance && propertyInfo.IsAutomatic;
+        type.Properties.Add(propertyInfo.Name, propertyInfo);
+      }
     }
 
     private static bool IsCSharpAutoProperty(TypeDefinition type, PropertyDefinition property)

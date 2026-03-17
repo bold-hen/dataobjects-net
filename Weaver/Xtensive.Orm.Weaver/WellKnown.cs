@@ -21,6 +21,7 @@ namespace Xtensive.Orm.Weaver
     public static readonly string EntitySetType = "Xtensive.Orm.EntitySet`1";
     public static readonly string EntitySetItemType = "Xtensive.Orm.Internals.EntitySetItem`2";
     public static readonly string StructureType = "Xtensive.Orm.Structure";
+    public static readonly string JsonTypeType = "Xtensive.Orm.JsonType";
 
     public static readonly string KeyAttribute = "Xtensive.Orm.KeyAttribute";
     public static readonly string FieldAttribute = "Xtensive.Orm.FieldAttribute";

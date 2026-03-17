@@ -13,5 +13,6 @@ namespace Xtensive.Orm.Weaver
     EntitySet,
     EntityInterface,
     Structure,
+    JsonType,
   }
 }

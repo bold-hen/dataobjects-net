@@ -1,6 +1,8 @@
-// Copyright (C) 2024 Xtensive LLC.
+// Copyright (C) 2024-2025 Xtensive LLC.
 // This code is distributed under MIT license terms.
 // See the License.txt file in the project root for more information.
+
+using System.ComponentModel;
 
 namespace Xtensive.Orm
 {
@@ -15,6 +17,11 @@ namespace Xtensive.Orm
   /// <para>
   /// On SQL Server 2025 (v17+), the native <c>json</c> data type is used.
   /// On older SQL Server versions, <c>nvarchar(max)</c> is used as a fallback.
+  /// </para>
+  /// <para>
+  /// Property setters are automatically weaved by the ORM Weaver to raise
+  /// <see cref="INotifyPropertyChanged.PropertyChanged"/>, enabling
+  /// automatic change tracking for inner property mutations.
   /// </para>
   /// </remarks>
   /// <example>
@@ -36,11 +43,23 @@ namespace Xtensive.Orm
   ///   public Address HomeAddress { get; set; }
   ///
   ///   [Field]
-  ///   public Address[] PreviousAddresses { get; set; }
+  ///   public JsonTypeArray&lt;Address&gt; PreviousAddresses { get; private set; }
   /// }
   /// </code>
   /// </example>
-  public abstract class JsonType
+  public abstract class JsonType : INotifyPropertyChanged
   {
+    /// <inheritdoc/>
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    /// <summary>
+    /// Raises the <see cref="PropertyChanged"/> event.
+    /// Called automatically by the ORM Weaver after each property setter.
+    /// </summary>
+    /// <param name="propertyName">The name of the property that changed.</param>
+    protected internal void OnPropertyChanged(string propertyName)
+    {
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
   }
 }

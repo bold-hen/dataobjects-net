@@ -5,6 +5,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text.Json;
 using Xtensive.Orm.Internals;
 using Xtensive.Orm.Model;
@@ -22,7 +23,8 @@ namespace Xtensive.Orm
   /// Mutations (Add, Remove, Clear) are automatically persisted back to the
   /// entity's underlying tuple, so changes are included in the current transaction.
   /// Inner property mutations on array items (e.g., <c>array[0].Name = "x"</c>)
-  /// are detected automatically via snapshot comparison before persist.
+  /// are detected automatically via <see cref="INotifyPropertyChanged"/> subscription,
+  /// injected by the ORM Weaver into <see cref="JsonType"/> subclass setters.
   /// </para>
   /// <para>
   /// Declare properties of this type with <c>{ get; private set; }</c>,
@@ -42,7 +44,7 @@ namespace Xtensive.Orm
   /// }
   /// </code>
   /// </example>
-  public class JsonTypeArray<TItem> : IFieldValueAdapter, IJsonFieldValueAdapter, ICollection<TItem>
+  public class JsonTypeArray<TItem> : IFieldValueAdapter, ICollection<TItem>
     where TItem : JsonType
   {
     private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions {
@@ -53,7 +55,6 @@ namespace Xtensive.Orm
     private readonly List<TItem> innerList;
     private readonly Persistent owner;
     private readonly FieldInfo field;
-    private string originalJson;
 
     /// <inheritdoc/>
     Persistent IFieldValueAdapter.Owner => owner;
@@ -84,7 +85,9 @@ namespace Xtensive.Orm
     {
       get => innerList[index];
       set {
+        UnsubscribeItem(innerList[index]);
         innerList[index] = value;
+        SubscribeItem(value);
         PersistChanges();
       }
     }
@@ -93,6 +96,7 @@ namespace Xtensive.Orm
     public void Add(TItem item)
     {
       innerList.Add(item);
+      SubscribeItem(item);
       PersistChanges();
     }
 
@@ -100,14 +104,17 @@ namespace Xtensive.Orm
     public bool Remove(TItem item)
     {
       var result = innerList.Remove(item);
-      if (result)
+      if (result) {
+        UnsubscribeItem(item);
         PersistChanges();
+      }
       return result;
     }
 
     /// <inheritdoc/>
     public void Clear()
     {
+      UnsubscribeAll();
       innerList.Clear();
       PersistChanges();
     }
@@ -124,29 +131,46 @@ namespace Xtensive.Orm
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    /// <summary>
-    /// Re-serializes the collection and, if it differs from the original snapshot,
-    /// writes the updated JSON back to the owner's tuple.
-    /// This catches inner property mutations on array items.
-    /// </summary>
-    bool IJsonFieldValueAdapter.FlushIfDirty()
+    #region INPC subscription
+
+    private void SubscribeItem(TItem item)
     {
-      if (owner == null || field == null)
-        return false;
-
-      var currentJson = JsonSerializer.Serialize(innerList, SerializerOptions);
-      if (string.Equals(currentJson, originalJson, StringComparison.Ordinal))
-        return false;
-
-      // Inner properties of items were mutated — write updated JSON to the tuple
-      var fieldIndex = field.MappingInfo.Offset;
-      owner.SystemBeforeTupleChange();
-      owner.Tuple.SetValue(fieldIndex, currentJson);
-      owner.SystemTupleChange();
-
-      originalJson = currentJson;
-      return true;
+      if (item != null && owner != null) {
+        item.PropertyChanged += OnItemPropertyChanged;
+      }
     }
+
+    private void UnsubscribeItem(TItem item)
+    {
+      if (item != null) {
+        item.PropertyChanged -= OnItemPropertyChanged;
+      }
+    }
+
+    private void SubscribeAll()
+    {
+      if (owner == null)
+        return;
+      foreach (var item in innerList) {
+        if (item != null)
+          item.PropertyChanged += OnItemPropertyChanged;
+      }
+    }
+
+    private void UnsubscribeAll()
+    {
+      foreach (var item in innerList) {
+        if (item != null)
+          item.PropertyChanged -= OnItemPropertyChanged;
+      }
+    }
+
+    private void OnItemPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+      PersistChanges();
+    }
+
+    #endregion
 
     private void PersistChanges()
     {
@@ -163,9 +187,6 @@ namespace Xtensive.Orm
       owner.SystemBeforeTupleChange();
       owner.Tuple.SetValue(fieldIndex, jsonString);
       owner.SystemTupleChange();
-
-      // Update snapshot so FlushIfDirty doesn't re-detect this change
-      originalJson = jsonString;
     }
 
     /// <summary>
@@ -196,18 +217,15 @@ namespace Xtensive.Orm
       this.owner = owner;
       this.field = field;
 
-      // Deserialize existing JSON from the tuple and take a snapshot
+      // Deserialize existing JSON from the tuple
       var fieldIndex = field.MappingInfo.Offset;
       var jsonString = owner.Tuple.GetValueOrDefault<string>(fieldIndex);
-      originalJson = jsonString;
       innerList = string.IsNullOrEmpty(jsonString)
         ? new List<TItem>()
         : JsonSerializer.Deserialize<List<TItem>>(jsonString, SerializerOptions) ?? new List<TItem>();
 
-      // Register with the session for dirty-checking before persist
-      if (owner is Entity entity && entity.Session != null) {
-        entity.Session.RegisterJsonFieldAdapter(this);
-      }
+      // Subscribe to PropertyChanged on each deserialized item
+      SubscribeAll();
     }
   }
 }

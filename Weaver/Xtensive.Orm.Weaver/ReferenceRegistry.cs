@@ -35,6 +35,8 @@ namespace Xtensive.Orm.Weaver
     public TypeReference FieldInfo { get; set; }
     public TypeReference Persistent { get; set; }
     public TypeReference PersistenceImplementation { get; set; }
+    public TypeReference JsonType { get; set; }
+    public MethodReference JsonTypeOnPropertyChanged { get; set; }
 
     public MethodReference ProcessedByWeaverAttributeConstructor { get; set; }
     public MethodReference EntityTypeAttributeConstructor { get; set; }

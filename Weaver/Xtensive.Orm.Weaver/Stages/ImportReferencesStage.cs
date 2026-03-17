@@ -70,6 +70,10 @@ namespace Xtensive.Orm.Weaver.Stages
       persistentSetter.GenericParameters.Add(setterType);
       registry.PersistentSetterDefinition = context.TargetModule.ImportReference(persistentSetter);
 
+      // Xtensive.Orm — JsonType
+      var jsonTypeType = registry.JsonType = ImportType(context, ormAssembly, WellKnown.JsonTypeType);
+      registry.JsonTypeOnPropertyChanged = ImportMethod(context, jsonTypeType, "OnPropertyChanged", true, voidType, stringType);
+
       registry.ProcessedByWeaverAttributeConstructor = ImportConstructor(context, ormAssembly, WellKnown.ProcessedByWeaverAttribute);
       registry.EntityTypeAttributeConstructor = ImportConstructor(context, ormAssembly, WellKnown.EntityTypeAttribute);
       registry.EntitySetTypeAttributeConstructor = ImportConstructor(context, ormAssembly, WellKnown.EntitySetTypeAttribute);

@@ -56,6 +56,9 @@ namespace Xtensive.Orm.Weaver.Stages
         case PersistentTypeKind.Structure:
           ProcessStructure(context, type);
           break;
+        case PersistentTypeKind.JsonType:
+          ProcessJsonType(context, type);
+          break;
         }
 
       if (propertyChecker.HasSkippedProperties) {
@@ -130,6 +133,18 @@ namespace Xtensive.Orm.Weaver.Stages
         if (property.PersistentName!=null)
           context.WeavingTasks.Add(new AddAttributeTask(propertyDefinition,
             context.References.OverrideFieldNameAttributeConstructor, property.PersistentName));
+      }
+    }
+
+    private void ProcessJsonType(ProcessorContext context, TypeInfo type)
+    {
+      var definition = type.Definition;
+      // For JsonType subclasses, weave property setters to call OnPropertyChanged
+      foreach (var property in type.Properties.Values.Where(p => p.IsPersistent)) {
+        if (!property.IsAutomatic)
+          continue;
+        context.WeavingTasks.Add(
+          new ImplementJsonPropertyNotificationTask(definition, property.Definition));
       }
     }
 
